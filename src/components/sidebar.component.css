@@ -1,0 +1,5 @@
+.sidebar {
+
+    background-color: oklch(from var(--bs-body-bg) calc(l - 0.025) c h);
+
+}

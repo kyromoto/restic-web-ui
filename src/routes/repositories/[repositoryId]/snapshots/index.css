@@ -1,0 +1,61 @@
+.list-group.snapshots {
+
+    grid-area: list;
+    overflow: auto;
+    align-self: start;
+
+    display: grid;
+
+    grid-template-columns: auto auto auto auto auto 1fr auto auto;
+
+    a {
+
+        grid-column: 1 / -1;
+
+        display: grid;
+
+        grid-template-columns: subgrid;
+        grid-template-rows: auto auto auto;
+
+        grid-template-areas:
+            "id time host username app-version . bytes files"
+            "id time host username app-version . bytes dirs"
+        ;
+
+        column-gap: 2rem;
+
+        align-items: center;
+
+        .id {
+            grid-area: id;
+        }
+
+        .time {
+            grid-area: time;
+        }
+
+        .host {
+            grid-area: host;
+        }
+
+        .username {
+            grid-area: username;
+        }
+
+        .app-version {
+            grid-area: app-version;
+        }
+
+        .bytes {
+            grid-area: bytes;
+        }
+
+        .files {
+            grid-area: files;
+        }
+
+        .dirs {
+            grid-area: dirs;
+        }
+    }
+}

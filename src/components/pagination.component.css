@@ -1,0 +1,29 @@
+.pagination-container {
+
+    height: 100%;
+
+    display: grid;
+
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+        "pagination-page"
+        "pagination-nav"
+    ;
+
+    gap: 1rem;
+
+    .pagination-page {
+        
+        grid-area: pagination-page;
+
+        height: 100%;
+        overflow: auto;
+        align-self: start;
+    }
+
+    .pagination-nav {
+        grid-area: pagination-nav;
+    }
+
+}

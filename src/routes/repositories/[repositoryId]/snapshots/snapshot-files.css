@@ -1,0 +1,35 @@
+.list-group.files {
+
+    display: grid;
+
+    grid-template-columns: auto 1fr;
+
+    .list-group-item {
+        
+        grid-column: 1 / -1;
+
+        display: grid;
+
+        grid-template-columns: subgrid;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+            "type path"
+            "type size"
+        ;
+
+        column-gap: 1rem;
+        align-items: center;
+
+        .type {
+            grid-area: type;
+        }
+
+        .path {
+            grid-area: path;
+        }
+
+        .size {
+            grid-area: size;
+        }
+    }
+}

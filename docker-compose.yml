@@ -1,0 +1,19 @@
+services:
+  restic-web-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/ping', (r) => {let data='';r.on('data',d=>data+=d);r.on('end',()=>process.exit(r.statusCode===200&&data.includes('pong')?0:1))})"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
