@@ -7,15 +7,17 @@ import "./index.css";
 import * as ResticService from "~/services/restic.service";
 import * as ConfigService  from "~/services/config.service";
 import { PaginationComponent } from "~/components/pagination.component";
+import ListSettingsComponent, { ListValues } from "~/components/list-settings.component";
 
 
 
 export default function SnaphotsView() {
 
-    const [getFilesPerpage, setFilesPerpage] = createSignal(10);
+    const [getPerPage, setPerPage] = createSignal<10 | 25 | 50 | 100>(10);
     const [getPage, setPage] = createSignal(1);
-    const left = () => (getPage() - 1) * getFilesPerpage();
-    const right = () => getPage() * getFilesPerpage();
+    const [getOrder, setOrder] = createSignal<"newest" | "oldest">("newest");
+    const left = () => (getPage() - 1) * getPerPage();
+    const right = () => getPage() * getPerPage();
 
     const params = useParams();
     const config = createAsync(() => ConfigService.getConfigAsync(), { initialValue: { repositories: {} } });
@@ -28,28 +30,45 @@ export default function SnaphotsView() {
         return snapshots;
     });
 
+    const handleSettingsChange = (values: ListValues) => {
+        if (values.perPage !== getPerPage()) {
+            setPerPage(values.perPage);
+        }
+
+        if (values.order !== getOrder()) {
+            setOrder(values.order);
+        }
+    }
+
+    const sortFn = (a: ResticService.Types.Snapshot, b: ResticService.Types.Snapshot) => {
+        return getOrder() === "newest" ? b.time.getTime() - a.time.getTime() : a.time.getTime() - b.time.getTime();
+    }
+
     createEffect(() => console.debug(`Current page: ${getPage()}`));
     
     return (
         <Suspense fallback={<div class="font-monospace" style={{ "display": "grid", "place-items": "center", "height": "100%", "width": "100%" }}>Loading...</div>}>
             <Title>{params.repositoryId} snapshots</Title>
             <main class="h-100">
-                <PaginationComponent total={snapshots()?.length || 0} perPage={getFilesPerpage()} currentPage={getPage()} onPageChange={setPage}>
-                    <div class="list-group snapshots">
-                        <For each={snapshots()?.slice(left(), right())}>
-                            {(snapshot: ResticService.Types.Snapshot) => (
-                                <A href={`/repositories/${params.repositoryId}/snapshots/${snapshot.short_id}`} class="list-group-item list-group-item-action font-monospace">
-                                    <span class="id">{snapshot.short_id}</span>
-                                    <span class="time">{snapshot.time.toLocaleString()}</span>
-                                    <span class="host">{snapshot.hostname}</span>
-                                    <span class="username">{snapshot.username}</span>
-                                    <span class="app-version">{snapshot.program_version}</span>
-                                    <span class="bytes">{snapshot.summary ? Math.round(snapshot.summary.total_bytes_processed / 1024 / 1024) : "-"} MiB</span>
-                                    <span class="files"><i class="bi bi-file" /> {snapshot.summary?.files_new || "-"} | {snapshot.summary?.files_changed || "-"} | {snapshot.summary?.files_unmodified || "-"}</span>
-                                    <span class="dirs"><i class="bi bi-folder" /> {snapshot.summary?.dirs_new || "-"} | {snapshot.summary?.dirs_changed || "-"} | {snapshot.summary?.dirs_unmodified || "-"}</span>
-                                </A>
-                            )}
-                        </For>
+                <PaginationComponent total={snapshots()?.length || 0} perPage={getPerPage()} currentPage={getPage()} onPageChange={setPage}>
+                    <div style={{ display: "flex", "flex-direction": "column", gap: "1rem" }}>
+                        <ListSettingsComponent order={getOrder()} perPage={getPerPage()} onChange={handleSettingsChange} />
+                        <div class="list-group snapshots w-100">
+                            <For each={snapshots()?.sort(sortFn).slice(left(), right())}>
+                                {(snapshot: ResticService.Types.Snapshot) => (
+                                    <A href={`/repositories/${params.repositoryId}/snapshots/${snapshot.short_id}`} class="list-group-item list-group-item-action font-monospace">
+                                        <span class="id">{snapshot.short_id}</span>
+                                        <span class="time">{snapshot.time.toLocaleString()}</span>
+                                        <span class="host">{snapshot.hostname}</span>
+                                        <span class="username">{snapshot.username}</span>
+                                        <span class="app-version">{snapshot.program_version}</span>
+                                        <span class="bytes">{snapshot.summary ? Math.round(snapshot.summary.total_bytes_processed / 1024 / 1024) : "-"} MiB</span>
+                                        <span class="files"><i class="bi bi-file" /> {snapshot.summary?.files_new || "-"} | {snapshot.summary?.files_changed || "-"} | {snapshot.summary?.files_unmodified || "-"}</span>
+                                        <span class="dirs"><i class="bi bi-folder" /> {snapshot.summary?.dirs_new || "-"} | {snapshot.summary?.dirs_changed || "-"} | {snapshot.summary?.dirs_unmodified || "-"}</span>
+                                    </A>
+                                )}
+                            </For>
+                        </div>
                     </div>
                 </PaginationComponent>
             </main>

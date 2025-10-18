@@ -7,14 +7,16 @@ import * as ConfigService  from "~/services/config.service";
 
 import "./snapshot-files.css";
 import { PaginationComponent } from "~/components/pagination.component";
+import ListSettingsComponent, { ListValues } from "~/components/list-settings.component";
 
 
 export default function SnapshotDetailsView() {
 
-    const [getFilesPerpage, setFilesPerpage] = createSignal(10);
+    const [getPerPage, setPerPage] = createSignal<ListValues["perPage"]>(10);
     const [getPage, setPage] = createSignal(1);
-    const left = () => (getPage() - 1) * getFilesPerpage();
-    const right = () => getPage() * getFilesPerpage();
+    const [getOrder, setOrder] = createSignal<"newest" | "oldest">("newest");
+    const left = () => (getPage() - 1) * getPerPage();
+    const right = () => getPage() * getPerPage();
 
     const params = useParams();
     const config = createAsync(() => ConfigService.getConfigAsync(), { initialValue: { repositories: {} } });
@@ -27,31 +29,46 @@ export default function SnapshotDetailsView() {
         return snapshots;
     }, { initialValue: [] });
 
-    createEffect(() => console.debug(`Current page: ${getPage()}`));
+    const handleSettingsChange = (values: ListValues) => {
+        if (values.perPage !== getPerPage()) {
+            setPerPage(values.perPage);
+        }
+
+        if (values.order !== getOrder()) {
+            setOrder(values.order);
+        }
+    }
+
+    const sortFn = (a: ResticService.Types.File, b: ResticService.Types.File) => {
+        return getOrder() === "newest" ? b.mtime.getTime() - a.mtime.getTime() : a.mtime.getTime() - b.mtime.getTime();
+    }
     
     return (
         <>
             <Title>{params.repositoryId} snapshot {params.snapshotId}</Title>
             <Suspense fallback={<div class="font-monospace" style={{ "display": "grid", "place-items": "center", "height": "100%", "width": "100%" }}>Loading...</div>}>
                 <main class="h-100">
-                    <PaginationComponent total={files()?.length || 0} perPage={getFilesPerpage()} currentPage={getPage()} onPageChange={setPage}>
-                        <ul class="files list-group font-monospace">
-                            <For each={files()?.slice(left(), right())}>
-                                {(file: ResticService.Types.File) => (
-                                    <li class="list-group-item">
-                                        <div class="type"><i class={`bi bi-${file.type === "dir" ? "folder" : "file-earmark"}`} /></div>
-                                        <div class="path">{file.path}</div>
-                                        <div class="size d-flex gap-1">
-                                            {file.size && <span class="badge rounded-pill text-bg-secondary fw-normal">{`${file.size} byte`}</span>}
-                                            <span class="badge rounded-pill text-bg-secondary fw-normal">{file.permissions}</span>
-                                            <span class="badge rounded-pill text-bg-secondary fw-normal">{file.ctime.toUTCString()}</span>
-                                            <span class="badge rounded-pill text-bg-secondary fw-normal">{file.mtime.toUTCString()}</span>
-                                            <span class="badge rounded-pill text-bg-secondary fw-normal">{file.atime.toUTCString()}</span>
-                                        </div>
-                                    </li>
-                                )}
-                            </For>
-                        </ul>
+                    <PaginationComponent total={files()?.length || 0} perPage={getPerPage()} currentPage={getPage()} onPageChange={setPage}>
+                        <div>
+                            <ListSettingsComponent order={getOrder()} perPage={getPerPage()} onChange={handleSettingsChange} />
+                            <ul class="files list-group font-monospace">
+                                <For each={files()?.sort(sortFn).slice(left(), right())}>
+                                    {(file: ResticService.Types.File) => (
+                                        <li class="list-group-item">
+                                            <div class="type"><i class={`bi bi-${file.type === "dir" ? "folder" : "file-earmark"}`} /></div>
+                                            <div class="path">{file.path}</div>
+                                            <div class="size d-flex gap-1">
+                                                {file.size && <span class="badge rounded-pill text-bg-secondary fw-normal">{`${file.size} byte`}</span>}
+                                                <span class="badge rounded-pill text-bg-secondary fw-normal">{file.permissions}</span>
+                                                <span class="badge rounded-pill text-bg-secondary fw-normal">{file.ctime.toUTCString()}</span>
+                                                <span class="badge rounded-pill text-bg-secondary fw-normal">{file.mtime.toUTCString()}</span>
+                                                <span class="badge rounded-pill text-bg-secondary fw-normal">{file.atime.toUTCString()}</span>
+                                            </div>
+                                        </li>
+                                    )}
+                                </For>
+                            </ul>
+                        </div>
                     </PaginationComponent>
                 </main>
             </Suspense>

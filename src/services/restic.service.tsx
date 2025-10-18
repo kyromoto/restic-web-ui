@@ -3,23 +3,18 @@ import path from "node:path";
 import { promisify } from "node:util";
 import child_process from "node:child_process";
 
+import dayjs from "dayjs";
 import { query } from "@solidjs/router";
+
+
 import { ConfigSchema } from "./config.service";
 
 const exec = promisify(child_process.exec);
 
-export type GetSnapshotsParams = {
-    repository: string
-    password: string
-    rest?: {
-        username: string
-        password: string
-    }
-}
+
 
 export const getSnapshots = query(async (params: ConfigSchema["repositories"][string]) => {
     "use server";
-
     try {
             const config = makeExecConfig(params);
             console.debug(`Running: restic snapshots --json`, config);
@@ -38,12 +33,17 @@ export const getSnapshot = query(async (params: ConfigSchema["repositories"][str
    "use server";
     try {
         const config = makeExecConfig(params);
-        console.debug(`Running: restic ls ${snapshotId} --json`, config);
-        const { stdout, stderr } = await exec(`restic ls ${snapshotId} --json`, config);
+        const cmd = `restic ls ${snapshotId} --json`;
+
+        console.debug(`Running: ${cmd}`, config);
+        const { stdout, stderr } = await exec(cmd, config);
         if (stderr) throw new Error(stderr);
+        
         const lines = stdout.trim().split("\n");
         lines.shift();
-        const files = lines.filter(line => line.trim().length > 0).map(line => JSON.parse(line, reviver) as Types.File);
+        const files = lines
+            .filter(line => line.trim().length > 0)
+            .map(line => JSON.parse(line, reviver) as Types.File);
         return files;
     } catch (error: any) {
         console.error(`Failed to get snapshot: ${error.message || error}`);
@@ -100,10 +100,14 @@ export namespace Types {
 }
 
 
-const dateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/;
 
 const reviver = (_key: string, value: any) => {
-    return typeof value === "string" && dateRegex.test(value) ? new Date(value) : value;
+    
+    if (typeof value === "string" && dayjs(value).isValid()) {
+        return new Date(value);
+    }
+
+    return value;
 };
 
 
