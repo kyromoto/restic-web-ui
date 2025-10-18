@@ -8,16 +8,16 @@ import * as ResticService from "~/services/restic.service";
 import * as ConfigService  from "~/services/config.service";
 import { PaginationComponent } from "~/components/pagination.component";
 import ListSettingsComponent, { ListValues } from "~/components/list-settings.component";
+import { makePersisted } from "@solid-primitives/storage";
 
 
 
 export default function SnaphotsView() {
 
-    const [getPerPage, setPerPage] = createSignal<10 | 25 | 50 | 100>(10);
+    const [getListSettings, setListSettings] = makePersisted(createSignal<ListValues>({ perPage: 10, order: "newest" }));
     const [getPage, setPage] = createSignal(1);
-    const [getOrder, setOrder] = createSignal<"newest" | "oldest">("newest");
-    const left = () => (getPage() - 1) * getPerPage();
-    const right = () => getPage() * getPerPage();
+    const left = () => (getPage() - 1) * getListSettings().perPage;
+    const right = () => getPage() * getListSettings().perPage;
 
     const params = useParams();
     const config = createAsync(() => ConfigService.getConfigAsync(), { initialValue: { repositories: {} } });
@@ -30,18 +30,8 @@ export default function SnaphotsView() {
         return snapshots;
     });
 
-    const handleSettingsChange = (values: ListValues) => {
-        if (values.perPage !== getPerPage()) {
-            setPerPage(values.perPage);
-        }
-
-        if (values.order !== getOrder()) {
-            setOrder(values.order);
-        }
-    }
-
     const sortFn = (a: ResticService.Types.Snapshot, b: ResticService.Types.Snapshot) => {
-        return getOrder() === "newest" ? b.time.getTime() - a.time.getTime() : a.time.getTime() - b.time.getTime();
+        return getListSettings().order === "newest" ? b.time.getTime() - a.time.getTime() : a.time.getTime() - b.time.getTime();
     }
 
     createEffect(() => console.debug(`Current page: ${getPage()}`));
@@ -50,9 +40,9 @@ export default function SnaphotsView() {
         <Suspense fallback={<div class="font-monospace" style={{ "display": "grid", "place-items": "center", "height": "100%", "width": "100%" }}>Loading...</div>}>
             <Title>{params.repositoryId} snapshots</Title>
             <main class="h-100">
-                <PaginationComponent total={snapshots()?.length || 0} perPage={getPerPage()} currentPage={getPage()} onPageChange={setPage}>
+                <PaginationComponent total={snapshots()?.length || 0} perPage={getListSettings().perPage} currentPage={getPage()} onPageChange={setPage}>
                     <div style={{ display: "flex", "flex-direction": "column", gap: "1rem" }}>
-                        <ListSettingsComponent order={getOrder()} perPage={getPerPage()} onChange={handleSettingsChange} />
+                        <ListSettingsComponent order={getListSettings().order} perPage={getListSettings().perPage} onChange={setListSettings} />
                         <div class="list-group snapshots w-100">
                             <For each={snapshots()?.sort(sortFn).slice(left(), right())}>
                                 {(snapshot: ResticService.Types.Snapshot) => (

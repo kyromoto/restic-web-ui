@@ -8,15 +8,15 @@ import * as ConfigService  from "~/services/config.service";
 import "./snapshot-files.css";
 import { PaginationComponent } from "~/components/pagination.component";
 import ListSettingsComponent, { ListValues } from "~/components/list-settings.component";
+import { makePersisted } from "@solid-primitives/storage";
 
 
 export default function SnapshotDetailsView() {
 
-    const [getPerPage, setPerPage] = createSignal<ListValues["perPage"]>(10);
+    const [getListSettings, setListSettings] = makePersisted(createSignal<ListValues>({ perPage: 10, order: "newest" }));
     const [getPage, setPage] = createSignal(1);
-    const [getOrder, setOrder] = createSignal<"newest" | "oldest">("newest");
-    const left = () => (getPage() - 1) * getPerPage();
-    const right = () => getPage() * getPerPage();
+    const left = () => (getPage() - 1) * getListSettings().perPage;
+    const right = () => getPage() * getListSettings().perPage;
 
     const params = useParams();
     const config = createAsync(() => ConfigService.getConfigAsync(), { initialValue: { repositories: {} } });
@@ -29,18 +29,8 @@ export default function SnapshotDetailsView() {
         return snapshots;
     }, { initialValue: [] });
 
-    const handleSettingsChange = (values: ListValues) => {
-        if (values.perPage !== getPerPage()) {
-            setPerPage(values.perPage);
-        }
-
-        if (values.order !== getOrder()) {
-            setOrder(values.order);
-        }
-    }
-
     const sortFn = (a: ResticService.Types.File, b: ResticService.Types.File) => {
-        return getOrder() === "newest" ? b.mtime.getTime() - a.mtime.getTime() : a.mtime.getTime() - b.mtime.getTime();
+        return getListSettings().order === "newest" ? b.mtime.getTime() - a.mtime.getTime() : a.mtime.getTime() - b.mtime.getTime();
     }
     
     return (
@@ -48,9 +38,9 @@ export default function SnapshotDetailsView() {
             <Title>{params.repositoryId} snapshot {params.snapshotId}</Title>
             <Suspense fallback={<div class="font-monospace" style={{ "display": "grid", "place-items": "center", "height": "100%", "width": "100%" }}>Loading...</div>}>
                 <main class="h-100">
-                    <PaginationComponent total={files()?.length || 0} perPage={getPerPage()} currentPage={getPage()} onPageChange={setPage}>
+                    <PaginationComponent total={files()?.length || 0} perPage={getListSettings().perPage} currentPage={getPage()} onPageChange={setPage}>
                         <div>
-                            <ListSettingsComponent order={getOrder()} perPage={getPerPage()} onChange={handleSettingsChange} />
+                            <ListSettingsComponent order={getListSettings().order} perPage={getListSettings().perPage} onChange={setListSettings} />
                             <ul class="files list-group font-monospace">
                                 <For each={files()?.sort(sortFn).slice(left(), right())}>
                                     {(file: ResticService.Types.File) => (
