@@ -1,3 +1,7 @@
+## 1.1.0 (2025-10-18)
+
+* feat: sort lists ([32e6db9](https://github.com/kyromoto/restic-web-ui/commit/32e6db9))
+
 ## 1.0.0 (2025-10-17)
 
 * fix: github workflow ([bc004d8](https://github.com/kyromoto/restic-web-ui/commit/bc004d8))
