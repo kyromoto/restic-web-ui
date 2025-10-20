@@ -1,3 +1,8 @@
+## <small>1.1.1 (2025-10-20)</small>
+
+* fix: wrap config into global store ([02fc613](https://github.com/kyromoto/restic-web-ui/commit/02fc613))
+* chore: persist list settings in local storage ([80e93d9](https://github.com/kyromoto/restic-web-ui/commit/80e93d9))
+
 ## 1.1.0 (2025-10-18)
 
 * feat: sort lists ([32e6db9](https://github.com/kyromoto/restic-web-ui/commit/32e6db9))
