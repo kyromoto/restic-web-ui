@@ -1,14 +1,15 @@
-import { createComputed, createEffect, createMemo, createSignal, For, Show, Suspense } from "solid-js";
 import { Title } from "@solidjs/meta";
+import { makePersisted } from "@solid-primitives/storage";
 import { createAsync, useParams } from "@solidjs/router";
+import { createSignal, For, Suspense } from "solid-js";
 
 import * as ResticService from "~/services/restic.service";
-import * as ConfigService  from "~/services/config.service";
-
-import "./snapshot-files.css";
+import { useConfig } from "~/contexts/app.context";
 import { PaginationComponent } from "~/components/pagination.component";
 import ListSettingsComponent, { ListValues } from "~/components/list-settings.component";
-import { makePersisted } from "@solid-primitives/storage";
+
+import "./snapshot-files.css";
+
 
 
 export default function SnapshotDetailsView() {
@@ -19,10 +20,10 @@ export default function SnapshotDetailsView() {
     const right = () => getPage() * getListSettings().perPage;
 
     const params = useParams();
-    const config = createAsync(() => ConfigService.getConfigAsync(), { initialValue: { repositories: {} } });
+    const config = useConfig();
     const files = createAsync(async () => {
-        console.debug(`Loading snapshot ${params.snapshotId} for ${params.repositoryId} ...`, config());
-        const result = Object.entries(config().repositories).find(([key, value]) => key === params.repositoryId)?.[1];
+        console.debug(`Loading snapshot ${params.snapshotId} for ${params.repositoryId} ...`, config);
+        const result = Object.entries(config.repositories).find(([key, value]) => key === params.repositoryId)?.[1];
         console.debug(`${params.repositoryId} -> ${JSON.stringify(result, null, 2)}`);
         const snapshots = result ? await ResticService.getSnapshot(result, params.snapshotId) : [];
         console.debug(`${params.repositoryId} -> ${params.snapshotId} -> ${JSON.stringify(snapshots, null, 2)}`);
@@ -39,7 +40,7 @@ export default function SnapshotDetailsView() {
             <Suspense fallback={<div class="font-monospace" style={{ "display": "grid", "place-items": "center", "height": "100%", "width": "100%" }}>Loading...</div>}>
                 <main class="h-100">
                     <PaginationComponent total={files()?.length || 0} perPage={getListSettings().perPage} currentPage={getPage()} onPageChange={setPage}>
-                        <div>
+                        <div style={{ display: "flex", "flex-direction": "column", gap: "1rem" }}>
                             <ListSettingsComponent order={getListSettings().order} perPage={getListSettings().perPage} onChange={setListSettings} />
                             <ul class="files list-group font-monospace">
                                 <For each={files()?.sort(sortFn).slice(left(), right())}>

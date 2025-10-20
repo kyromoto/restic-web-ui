@@ -1,18 +1,21 @@
-import { createEffect, createSignal, For, Suspense } from "solid-js";
 import { Title } from "@solidjs/meta";
+import { makePersisted } from "@solid-primitives/storage";
 import { A, createAsync, useParams } from "@solidjs/router";
+import { createEffect, createSignal, For, Suspense } from "solid-js";
+
+import * as ResticService from "~/services/restic.service";
+import ListSettingsComponent, { ListValues } from "~/components/list-settings.component";
+import { useConfig } from "~/contexts/app.context";
+import { PaginationComponent } from "~/components/pagination.component";
 
 import "./index.css";
 
-import * as ResticService from "~/services/restic.service";
-import * as ConfigService  from "~/services/config.service";
-import { PaginationComponent } from "~/components/pagination.component";
-import ListSettingsComponent, { ListValues } from "~/components/list-settings.component";
-import { makePersisted } from "@solid-primitives/storage";
 
 
 
 export default function SnaphotsView() {
+
+    const config = useConfig();
 
     const [getListSettings, setListSettings] = makePersisted(createSignal<ListValues>({ perPage: 10, order: "newest" }));
     const [getPage, setPage] = createSignal(1);
@@ -20,10 +23,9 @@ export default function SnaphotsView() {
     const right = () => getPage() * getListSettings().perPage;
 
     const params = useParams();
-    const config = createAsync(() => ConfigService.getConfigAsync(), { initialValue: { repositories: {} } });
     const snapshots = createAsync(async () => {
-        console.debug(`Loading snapshots for ${params.repositoryId} ...`, config());
-        const result = Object.entries(config().repositories).find(([key, value]) => key === params.repositoryId)?.[1];
+        console.debug(`Loading snapshots for ${params.repositoryId} ...`, config);
+        const result = Object.entries(config.repositories).find(([key, value]) => key === params.repositoryId)?.[1];
         console.debug(`${params.repositoryId} -> ${JSON.stringify(result, null, 2)}`);
         const snapshots = result ? await ResticService.getSnapshots(result) : [];
         console.debug(`${params.repositoryId} -> ${JSON.stringify(snapshots, null, 2)}`);

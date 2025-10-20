@@ -1,16 +1,18 @@
-import { A, createAsync, query } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import { createSignal, For, Suspense } from "solid-js";
-import * as ConfigService  from "~/services/config.service";
+
+import { useConfig } from "~/contexts/app.context";
 
 import "./sidebar.component.css";
 
 
 
+
 export function SidebarComponent() {
 
-    const config = createAsync(() => ConfigService.getConfigAsync(), { initialValue: { repositories: {} } });
+    const config = useConfig();
     const [repositories] = createSignal((() => {
-        return Object.keys(config().repositories).map(key => ({
+        return Object.keys(config.repositories).map(key => ({
             label: key, icon: "card-list", path: `/repositories/${key}/snapshots`    
         }))
     })());
