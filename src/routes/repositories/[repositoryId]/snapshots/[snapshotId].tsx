@@ -43,7 +43,7 @@ export default function SnapshotDetailsView() {
     
     return (
         <>
-            <Title>Files</Title>
+            <Title>Files | {id()}</Title>
             <Switch fallback={<div class="alert alert-warning text-center font-monospace">{files.state}...</div>}>
                 <Match when={files.state === "ready"}>
                     <main class="h-100">

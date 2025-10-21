@@ -46,7 +46,7 @@ export default function SnaphotsView() {
     return (
         <>
             <pre>{JSON.stringify(snapshots, null, 2)}</pre>
-            <Title>Snaphots</Title>
+            <Title>Snaphots | {id()}</Title>
             <Switch fallback={<div class="alert alert-info text-center font-monospace">Loading ...</div>}>
                 <Match when={snapshots.state === "ready"}>
                     <main class="h-100">

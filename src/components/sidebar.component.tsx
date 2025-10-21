@@ -22,12 +22,12 @@ export function SidebarComponent() {
     ]
 
     return (
-        <div class="sidebar p-2 d-flex flex-column" style={{ gap: "1rem" }}>
+        <div class="sidebar p-2 d-flex flex-column" style={{ gap: "2rem" }}>
             <ul class="nav nav-pills d-flex flex-column">
                 <For each={links}>
                     { link => (
                         <li class="nav-item">
-                            <A href={link.path} class="nav-link d-flex" style={{ gap: "1rem" }}>
+                            <A href={link.path} class="nav-link d-flex" style={{ gap: "1rem" }} end>
                                 <i class={`bi bi-${link.icon}`} />
                                 <span>{link.label}</span>
                             </A>
@@ -37,18 +37,21 @@ export function SidebarComponent() {
             </ul>
 
             <Suspense fallback={<div class="font-monospace" style={{ "display": "grid", "place-items": "center", "height": "100%", "width": "100%" }}>Loading...</div>}>
-                <ul class="nav nav-pills d-flex flex-column">
-                    <For each={repositories()}>
-                        {repo => (
-                            <li class="nav-item">
-                                <A href={repo.path} class="nav-link d-flex" style={{ gap: "1rem" }}>
-                                    <i class={`bi bi-${repo.icon}`} />
-                                    <span>{repo.label}</span>
-                                </A>
-                            </li>
-                        )}
-                    </For>
-                </ul>
+                <div class="d-flex flex-column gap-2">
+                    <h1 class="fs-6 fw-normal text-muted m-0 p-0 ps-1">Repositories</h1>
+                    <ul class="nav nav-pills d-flex flex-column">
+                        <For each={repositories()}>
+                            {repo => (
+                                <li class="nav-item">
+                                    <A href={repo.path} class="nav-link d-flex" style={{ gap: "1rem" }}>
+                                        <i class={`bi bi-${repo.icon}`} />
+                                        <span>{repo.label}</span>
+                                    </A>
+                                </li>
+                            )}
+                        </For>
+                    </ul>
+                </div>
             </Suspense>
         </div>
     )
