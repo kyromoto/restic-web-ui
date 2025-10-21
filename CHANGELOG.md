@@ -1,3 +1,7 @@
+## <small>1.1.2 (2025-10-21)</small>
+
+* fix: improved error handling and state response ([c76cdfc](https://github.com/kyromoto/restic-web-ui/commit/c76cdfc))
+
 ## <small>1.1.1 (2025-10-20)</small>
 
 * fix: wrap config into global store ([02fc613](https://github.com/kyromoto/restic-web-ui/commit/02fc613))
