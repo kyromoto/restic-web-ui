@@ -1,16 +1,41 @@
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
-import child_process from "node:child_process";
-
-import dayjs from "dayjs";
-import { query } from "@solidjs/router";
+import { spawn } from "node:child_process";
 
 
 import { ConfigSchema } from "./config.service";
 import z, { ZodError } from "zod";
 
-const exec = promisify(child_process.exec);
+
+
+const maskPasswords = (input: any) => {
+    if (typeof input !== 'object' || input === null) {
+        return input;
+    }
+
+    const result = Array.isArray(input) ? [] : {};
+
+    for (const key in input) {
+        const shouldMask = key.toLowerCase().includes('passwort') ||
+            key.toLowerCase().includes('password');
+
+        if (shouldMask && typeof input[key] === 'string') {
+            // @ts-ignore
+            result[key] = '********';
+        } else if (typeof input[key] === 'object') {
+            // @ts-ignore
+            result[key] = maskPasswords(input[key]); // Rekursiv für verschachtelte Objekte
+        } else {
+            // @ts-ignore
+            result[key] = input[key];
+        }
+    }
+
+    return result;
+}
+
+
+const maskPasswordSchema = z.any().transform(maskPasswords);
 
 
 
@@ -18,11 +43,25 @@ export const getSnapshots = async (params: ConfigSchema["repositories"][string])
     "use server";
     try {
             const config = makeExecConfig(params);
-            console.debug(`Running: restic snapshots --json`, config);
-            const { stdout, stderr } = await exec("restic snapshots --json", config);
-            if (stderr) throw new Error(stderr);
-            const types = JSON.parse(stdout, reviver) as Types.Snapshot[];
-            const parsed = z.array(Snapshot).safeParse(types);
+            console.debug(`Running: restic snapshots --json`, maskPasswordSchema.parse(config));
+
+            const data = await new Promise<string>((resolve, reject) => {
+
+                let stdout = "";
+                let stderr = "";
+
+                const child = spawn("restic", ["snapshots", "--json"], config);
+
+                child.stdout.on('data', data => stdout += data.toString());
+                child.stderr.on('data', data => stderr += data.toString());
+                child.on('close', code => {
+                    code === 0 ? resolve(stdout) : reject(stderr);
+                });
+
+            });
+
+            const snapshots = JSON.parse(data, reviver) as Types.Snapshot[];
+            const parsed = z.array(Snapshot).safeParse(snapshots);
             if (!parsed.success) throw new Error(parsed.error.message);
             return parsed.data;
     } catch (error: any) {
@@ -40,15 +79,27 @@ export const getSnapshot = async (params: ConfigSchema["repositories"][string], 
    "use server";
     try {
         const config = makeExecConfig(params);
-        const cmd = `restic ls ${snapshotId} --json`;
+        console.debug(`Running: restic ls ${snapshotId} --json`, maskPasswordSchema.parse(config));
 
-        console.debug(`Running: ${cmd}`, config);
-        const { stdout, stderr } = await exec(cmd, config);
-        if (stderr) throw new Error(stderr);
+        const data = await new Promise<string>((resolve, reject) => {
+
+            let stdout = "";
+            let stderr = "";
+
+            const child = spawn("restic", ["ls", snapshotId, "--json"], config);
+
+            child.stdout.on('data', data => stdout += data.toString());
+            child.stderr.on('data', data => stderr += data.toString());
+            child.on('close', code => {
+                code === 0 ? resolve(stdout) : reject(stderr);
+            });
+
+        });
         
-        const lines = stdout.trim().split("\n");
-        lines.shift();
-        const files = lines
+        const files = data
+            .trim()
+            .split("\n")
+            .slice(1)
             .filter(line => line.trim().length > 0)
             .map(line => JSON.parse(line, reviver) as Types.File);
 
@@ -72,7 +123,7 @@ export const Snapshot = z.object({
     time: z.date(),
     tree: z.string(),
     paths: z.array(z.string()),
-    excludes: z.array(z.string()),
+    excludes: z.array(z.string()).optional(),
     program_version: z.string(),
     summary: z.object({
         backup_start: z.date(),
@@ -106,69 +157,26 @@ export const File = z.object({
     mtime: z.date(),
     atime: z.date(),
     ctime: z.date(),
-    inode: z.number(),
+    inode: z.number().optional(),
     message_type: z.string(),
     struct_type: z.string(),
 });
 
 
 export namespace Types {
-
     export type Snapshot = z.infer<typeof Snapshot>
     export type File = z.infer<typeof File>
-    
-    // export type Snapshot = {
-    //     id: string
-    //     short_id: string
-    //     hostname: string
-    //     username: string
-    //     time: Date
-    //     tree: string
-    //     paths: Array<string>
-    //     excludes: Array<string>
-    //     program_version: string
-    //     summary?: {
-    //         backup_start: Date
-    //         backup_end: Date
-    //         files_new: number
-    //         files_changed: number
-    //         files_unmodified: number
-    //         dirs_new: number
-    //         dirs_changed: number
-    //         dirs_unmodified: number
-    //         data_blobs: number
-    //         tree_blobs: number
-    //         data_added: number
-    //         data_added_packed: number
-    //         total_files_processed: number
-    //         total_bytes_processed: number
-    //     }
-    // }
-
-    // export type File = {
-    //     name: string
-    //     type: string
-    //     path: string
-    //     size?: number
-    //     uid: number
-    //     gid: number
-    //     mode: number
-    //     permissions: string
-    //     mtime: Date
-    //     atime: Date
-    //     ctime: Date
-    //     inode: number
-    //     message_type: string
-    //     struct_type: string
-    // }
 }
 
+const reviver = (key: string, value: any) => {
 
+    if (typeof value === "string") {
+        
+        const datetime = z.iso.datetime({ offset: true }).safeParse(value);
 
-const reviver = (_key: string, value: any) => {
-    
-    if (typeof value === "string" && dayjs(value).isValid()) {
-        return new Date(value);
+        if (datetime.success) {
+            return new Date(datetime.data);
+        }
     }
 
     return value;

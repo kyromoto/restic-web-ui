@@ -27,13 +27,13 @@ export default function SnaphotsView() {
 
     const id = () => params.repositoryId;
     const [snapshots, { refetch }] = createResource(id, async () => {
-        console.debug(`Loading snapshots for ${id()} ...`, config);
+        // console.debug(`Loading snapshots for ${id()} ...`, config);
         const result = Object.entries(config.repositories).find(([key, value]) => key === id())?.[1];
         
-        console.debug(`${id()} -> ${JSON.stringify(result, null, 2)}`);
+        // console.debug(`${id()} -> ${JSON.stringify(result, null, 2)}`);
         const snapshots = result ? getSnapshots(result) : [];
         
-        console.debug(`${id()} -> ${JSON.stringify(snapshots, null, 2)}`);
+        // console.debug(`${id()} -> ${JSON.stringify(snapshots, null, 2)}`);
         return snapshots;
     });
 
@@ -45,6 +45,7 @@ export default function SnaphotsView() {
     
     return (
         <>
+            <pre>{JSON.stringify(snapshots, null, 2)}</pre>
             <Title>Snaphots</Title>
             <Switch fallback={<div class="alert alert-info text-center font-monospace">Loading ...</div>}>
                 <Match when={snapshots.state === "ready"}>

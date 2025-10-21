@@ -27,13 +27,13 @@ export default function SnapshotDetailsView() {
     
     const id = () => params.snapshotId;
     const [files, { refetch }] = createResource(id, async () => {
-        console.debug(`Loading snapshot ${id()} for ${params.repositoryId} ...`, config);
+        // console.debug(`Loading snapshot ${id()} for ${params.repositoryId} ...`, config);
         const result = Object.entries(config.repositories).find(([key, value]) => key === params.repositoryId)?.[1];
     
-        console.debug(`${params.repositoryId} -> ${JSON.stringify(result, null, 2)}`);
+        // console.debug(`${params.repositoryId} -> ${JSON.stringify(result, null, 2)}`);
         const snapshots = result ? getFiles(result, id()) : [];
         
-        console.debug(`${params.repositoryId} -> ${id()} -> ${JSON.stringify(snapshots, null, 2)}`);
+        // console.debug(`${params.repositoryId} -> ${id()} -> ${JSON.stringify(snapshots, null, 2)}`);
         return snapshots;
     });
 
