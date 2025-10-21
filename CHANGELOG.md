@@ -1,3 +1,7 @@
+## <small>1.1.4 (2025-10-21)</small>
+
+* fix: sidebar menu active item highlite ([fe81ce5](https://github.com/kyromoto/restic-web-ui/commit/fe81ce5))
+
 ## <small>1.1.3 (2025-10-21)</small>
 
 * fix: errors on restic remote execution ([5832e7c](https://github.com/kyromoto/restic-web-ui/commit/5832e7c))
