@@ -1,0 +1,18 @@
+ul.tree {
+
+    font-family: monospace;
+
+    list-style: none;
+
+    padding-left: 1.5rem;
+
+    li.tree-item {
+        span.tree-item-label {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            cursor: pointer;
+            line-height: 1.75rem;
+        }
+    }
+}
