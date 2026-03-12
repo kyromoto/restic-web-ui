@@ -43,6 +43,7 @@ export const getSnapshots = async (params: ConfigSchema["repositories"][string])
     "use server";
     try {
             const config = makeExecConfig(params);
+            console.debug(`PATH: ${process.env.PATH}`);
             console.debug(`Running: restic snapshots --json`, maskPasswordSchema.parse(config));
 
             const data = await new Promise<string>((resolve, reject) => {
@@ -112,6 +113,38 @@ export const getSnapshot = async (params: ConfigSchema["repositories"][string], 
 
 
 
+export const getVersion = async () => {
+    "use server";
+    try {
+        // const config = makeExecConfig(params);
+        console.debug(`Running: restic version`);
+
+        const data = await new Promise<string>((resolve, reject) => {
+
+            let stdout = "";
+            let stderr = "";
+
+            const child = spawn("restic", ["version", "--json"]);
+
+            child.stdout.on('data', data => stdout += data.toString());
+            child.stderr.on('data', data => stderr += data.toString());
+            child.on('close', code => code === 0 ? resolve(stdout) : reject(stderr));
+            child.on('error', error => reject(error));
+
+        });
+
+        const version = JSON.parse(data, reviver) as Types.Version;
+        const parsed = Version.safeParse(version);
+        if (!parsed.success) throw new Error(parsed.error.message);
+        return parsed.data;
+    } catch (error: any) {
+        console.error(`Failed to get version: ${error.message || error}`);
+        throw new Error("Failed to get version");
+    }
+}
+
+
+
 export type Snapshot = z.infer<typeof Snapshot>;
 export const Snapshot = z.object({
     id: z.string(),
@@ -161,9 +194,20 @@ export const File = z.object({
 });
 
 
+export type Version = z.infer<typeof Version>;
+export const Version = z.object({
+    message_type: z.string(),
+    version: z.string(),
+    go_version: z.string(),
+    go_os: z.string(),
+    go_arch: z.string(),
+});
+
+
 export namespace Types {
     export type Snapshot = z.infer<typeof Snapshot>
     export type File = z.infer<typeof File>
+    export type Version = z.infer<typeof Version>
 }
 
 const reviver = (key: string, value: any) => {

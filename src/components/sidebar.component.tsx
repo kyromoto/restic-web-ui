@@ -1,7 +1,8 @@
-import { A } from "@solidjs/router";
-import { createSignal, For, Suspense } from "solid-js";
+import { A, query } from "@solidjs/router";
+import { createResource, createSignal, For, Match, Suspense, Switch } from "solid-js";
 
 import { useConfig } from "~/contexts/app.context";
+import * as ResticService from "~/services/restic.service";
 
 import "./sidebar.component.css";
 
@@ -11,6 +12,9 @@ import "./sidebar.component.css";
 export function SidebarComponent() {
 
     const config = useConfig();
+    const getVersion = query(ResticService.getVersion, "get-restic-version");
+
+    const [version, { refetch }] = createResource(getVersion, async () => getVersion());
     const [repositories] = createSignal((() => {
         return Object.keys(config.repositories).map(key => ({
             label: key, icon: "card-list", path: `/repositories/${key}/snapshots`    
@@ -22,7 +26,7 @@ export function SidebarComponent() {
     ]
 
     return (
-        <div class="sidebar p-2 d-flex flex-column" style={{ gap: "2rem" }}>
+        <div class="sidebar p-2 d-flex flex-column" style={{ gap: "2rem", height: "100%" }}>
             <ul class="nav nav-pills d-flex flex-column">
                 <For each={links}>
                     { link => (
@@ -53,6 +57,22 @@ export function SidebarComponent() {
                     </ul>
                 </div>
             </Suspense>
+
+            <Switch fallback={<div class="alert alert-info text-center font-monospace">Retrieving restic version...</div>}>
+                <Match when={version.state === "ready"}>
+                    <div class="alert alert-info font-monospace">
+                        <div style={{ display: "grid", "grid-template-columns": "auto 1fr", "row-gap": ".25rem", "column-gap": "1rem", "font-size": "0.75rem"}}>
+                            <span>Restic:</span> <span>{version()?.version}</span>
+                            <span>Go:</span><span>{version()?.go_version.replace(/go/g, "")}</span>
+                        </div>
+                        
+                    </div>
+                </Match>
+
+                <Match when={version.error}>
+                    <div class="alert alert-danger text-center font-monospace">{version.error}</div>
+                </Match>
+            </Switch>
         </div>
     )
 
