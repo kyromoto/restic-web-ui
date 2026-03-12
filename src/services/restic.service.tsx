@@ -54,9 +54,8 @@ export const getSnapshots = async (params: ConfigSchema["repositories"][string])
 
                 child.stdout.on('data', data => stdout += data.toString());
                 child.stderr.on('data', data => stderr += data.toString());
-                child.on('close', code => {
-                    code === 0 ? resolve(stdout) : reject(stderr);
-                });
+                child.on('close', code => code === 0 ? resolve(stdout) : reject(stderr));
+                child.on('error', error => reject(error));
 
             });
 
@@ -90,9 +89,8 @@ export const getSnapshot = async (params: ConfigSchema["repositories"][string], 
 
             child.stdout.on('data', data => stdout += data.toString());
             child.stderr.on('data', data => stderr += data.toString());
-            child.on('close', code => {
-                code === 0 ? resolve(stdout) : reject(stderr);
-            });
+            child.on('close', code => code === 0 ? resolve(stdout) : reject(stderr));
+            child.on('error', error => reject(error));
 
         });
         
