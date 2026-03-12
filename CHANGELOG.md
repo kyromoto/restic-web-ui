@@ -1,3 +1,7 @@
+## <small>1.1.5 (2026-03-12)</small>
+
+* fix: audit ([81ce427](https://github.com/kyromoto/restic-web-ui/commit/81ce427))
+
 ## <small>1.1.4 (2025-10-21)</small>
 
 * fix: sidebar menu active item highlite ([fe81ce5](https://github.com/kyromoto/restic-web-ui/commit/fe81ce5))
