@@ -1,3 +1,7 @@
+## <small>1.1.7 (2026-03-12)</small>
+
+* fix: show restic bin version in sidebar ([b4c14e7](https://github.com/kyromoto/restic-web-ui/commit/b4c14e7))
+
 ## <small>1.1.6 (2026-03-12)</small>
 
 * fix: handle spawn errors ([202d382](https://github.com/kyromoto/restic-web-ui/commit/202d382))
