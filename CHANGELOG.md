@@ -1,3 +1,7 @@
+## <small>1.1.6 (2026-03-12)</small>
+
+* fix: handle spawn errors ([202d382](https://github.com/kyromoto/restic-web-ui/commit/202d382))
+
 ## <small>1.1.5 (2026-03-12)</small>
 
 * fix: audit ([81ce427](https://github.com/kyromoto/restic-web-ui/commit/81ce427))
