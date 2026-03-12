@@ -26,7 +26,7 @@ export function SidebarComponent() {
     ]
 
     return (
-        <div class="sidebar p-2 d-flex flex-column" style={{ gap: "2rem", height: "100%" }}>
+        <div class="sidebar p-2" style={{ display: "grid", "grid-template-columns": "1fr", "grid-template-rows": "auto 1fr auto", "align-items": "start", gap: "2rem", height: "100%" }}>
             <ul class="nav nav-pills d-flex flex-column">
                 <For each={links}>
                     { link => (
@@ -60,7 +60,7 @@ export function SidebarComponent() {
 
             <Switch fallback={<div class="alert alert-info text-center font-monospace">Retrieving restic version...</div>}>
                 <Match when={version.state === "ready"}>
-                    <div class="alert alert-info font-monospace">
+                    <div class="alert alert-info font-monospace m-0">
                         <div style={{ display: "grid", "grid-template-columns": "auto 1fr", "row-gap": ".25rem", "column-gap": "1rem", "font-size": "0.75rem"}}>
                             <span>Restic:</span> <span>{version()?.version}</span>
                             <span>Go:</span><span>{version()?.go_version.replace(/go/g, "")}</span>
