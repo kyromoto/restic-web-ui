@@ -1,7 +1,6 @@
 import { For, Show, JSX } from "solid-js";
 
 import "./pagination.component.css";
-import { c } from "vinxi/dist/types/lib/logger";
 
 
 

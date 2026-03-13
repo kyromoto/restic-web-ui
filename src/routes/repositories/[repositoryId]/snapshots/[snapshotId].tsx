@@ -9,7 +9,6 @@ import { PaginationComponent } from "~/components/pagination.component";
 import ListSettingsComponent, { ListValues } from "~/components/list-settings.component";
 
 import "./snapshot-files.css";
-import { snapshot } from "vinxi/dist/types/runtime/storage";
 import LoadingAlertComponent from "~/components/loading-alert.component";
 
 
@@ -31,7 +30,7 @@ export default function SnapshotDetailsView() {
         const result = Object.entries(config.repositories).find(([key, value]) => key === params.repositoryId)?.[1];
     
         // console.debug(`${params.repositoryId} -> ${JSON.stringify(result, null, 2)}`);
-        const snapshots = result ? getFiles(result, id()) : [];
+        const snapshots = result ? getFiles(params.repositoryId, id(), result) : [];
         
         // console.debug(`${params.repositoryId} -> ${id()} -> ${JSON.stringify(snapshots, null, 2)}`);
         return snapshots;

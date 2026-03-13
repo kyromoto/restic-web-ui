@@ -1,10 +1,11 @@
 import os from "node:os";
-import path from "node:path";
+import path, { join } from "node:path";
 import { spawn } from "node:child_process";
 
 
 import { ConfigSchema } from "./config.service";
 import z, { ZodError } from "zod";
+import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 
 
 
@@ -39,31 +40,30 @@ const maskPasswordSchema = z.any().transform(maskPasswords);
 
 
 
-export const getSnapshots = async (params: ConfigSchema["repositories"][string]) => {
+export const getSnapshots = async (repoName: string, params: ConfigSchema["repositories"][string]) => {
     "use server";
     try {
-            const config = makeExecConfig(params);
-            console.debug(`PATH: ${process.env.PATH}`);
-            console.debug(`Running: restic snapshots --json`, maskPasswordSchema.parse(config));
+        const config = makeExecConfig(params);
+        console.debug(`Running: restic snapshots`, maskPasswordSchema.parse(config));
 
-            const data = await new Promise<string>((resolve, reject) => {
+        const data = await new Promise<string>((resolve, reject) => {
 
-                let stdout = "";
-                let stderr = "";
+            let stdout = "";
+            let stderr = "";
 
-                const child = spawn("restic", ["snapshots", "--json"], config);
+            const child = spawn("restic", ["snapshots", "--json"], config);
 
-                child.stdout.on('data', data => stdout += data.toString());
-                child.stderr.on('data', data => stderr += data.toString());
-                child.on('close', code => code === 0 ? resolve(stdout) : reject(stderr));
-                child.on('error', error => reject(error));
+            child.stdout.on('data', data => stdout += data.toString());
+            child.stderr.on('data', data => stderr += data.toString());
+            child.on('close', code => code === 0 ? resolve(stdout) : reject(stderr));
+            child.on('error', error => reject(error));
 
-            });
+        });
 
-            const snapshots = JSON.parse(data, reviver) as Types.Snapshot[];
-            const parsed = z.array(Snapshot).safeParse(snapshots);
-            if (!parsed.success) throw new Error(parsed.error.message);
-            return parsed.data;
+        const snapshots = JSON.parse(data, reviver) as Types.Snapshot[];
+        const parsed = z.array(Snapshot).safeParse(snapshots);
+        if (!parsed.success) throw new Error(parsed.error.message);
+        return parsed.data;
     } catch (error: any) {
         if (error instanceof ZodError) {
             console.error(`Failed to get snapshots: ${error.message}`);
@@ -75,32 +75,87 @@ export const getSnapshots = async (params: ConfigSchema["repositories"][string])
 
 
 
-export const getSnapshot = async (params: ConfigSchema["repositories"][string], snapshotId: string) => {
-   "use server";
+export const getSnapshot = async (repoName: string, snapshotId: string, params: ConfigSchema["repositories"][string]) => {
+    "use server";
+
+    let startTime = new Date();
+
     try {
-        const config = makeExecConfig(params);
-        console.debug(`Running: restic ls ${snapshotId} --json`, maskPasswordSchema.parse(config));
 
-        const data = await new Promise<string>((resolve, reject) => {
+        const cachePath = join(process.cwd(), "data", "cache", `${repoName}.${snapshotId}`);
 
-            let stdout = "";
-            let stderr = "";
+        const readFromCache = async () => {
+            startTime = new Date();
+            console.debug(`Reading from cache: ${cachePath}`);
+            const raw = await readFile(cachePath, "utf-8").catch(() => null);
+            console.debug(`Took: ${new Date().getTime() - startTime.getTime()}ms`);
 
-            const child = spawn("restic", ["ls", snapshotId, "--json"], config);
+            startTime = new Date();
+            console.debug(`Parsing from cache: ${cachePath}`);
+            const data = raw ? JSON.parse(raw, reviver) : null;
+            console.debug(`Took: ${new Date().getTime() - startTime.getTime()}ms`);
+            
+            return data;
+        }
 
-            child.stdout.on('data', data => stdout += data.toString());
-            child.stderr.on('data', data => stderr += data.toString());
-            child.on('close', code => code === 0 ? resolve(stdout) : reject(stderr));
-            child.on('error', error => reject(error));
+        const writeToCache = async (data: any) => {
+            startTime = new Date();
+            console.debug(`Writing to cache: ${cachePath}`);
+            await writeFile(cachePath, JSON.stringify(data)).catch(() => console.error(`Failed to write to cache: ${cachePath}`));
+            console.debug(`Took: ${new Date().getTime() - startTime.getTime()}ms`);
+        }
 
-        });
+        const readFromRepository = async () => {
         
-        const files = data
-            .trim()
-            .split("\n")
-            .slice(1)
-            .filter(line => line.trim().length > 0)
-            .map(line => JSON.parse(line, reviver) as Types.File);
+            const config = makeExecConfig(params);
+            
+            startTime = new Date();
+            console.debug(`Running: restic ls ${snapshotId} --json`, maskPasswordSchema.parse(config));
+
+            const data = await new Promise<string>((resolve, reject) => {
+
+                let stdout = "";
+                let stderr = "";
+
+                const child = spawn("restic", ["ls", snapshotId, "--json"], config);
+
+                child.stdout.on('data', data => stdout += data.toString());
+                child.stderr.on('data', data => stderr += data.toString());
+                child.on('close', code => code === 0 ? resolve(stdout) : reject(stderr));
+                child.on('error', error => reject(error));
+
+            });
+
+            console.debug(`Took: ${new Date().getTime() - startTime.getTime()}ms`);
+
+
+            startTime = new Date();
+            console.debug(`Process data (1)...`);
+            const files = data
+                .trim()
+                .split("\n")
+                .slice(1)
+                .filter(line => line.trim().length > 0);
+            console.debug(`Took: ${new Date().getTime() - startTime.getTime()}ms`);
+
+
+            startTime = new Date();
+            console.debug(`Process data (2)...`);
+            const parsedFiles = files.map(line => JSON.parse(line, reviver) as Types.File);
+            console.debug(`Took: ${new Date().getTime() - startTime.getTime()}ms`);
+
+            return parsedFiles;
+        }
+
+        const files = await (async () => {
+            const cachedData = await readFromCache();
+            if (cachedData) return cachedData;
+            const repoData = await readFromRepository();
+            await writeToCache(repoData);
+            return repoData;
+        })();
+
+
 
         const parsed = z.array(File).safeParse(files);
         if (!parsed.success) throw new Error(parsed.error.message);
@@ -116,7 +171,6 @@ export const getSnapshot = async (params: ConfigSchema["repositories"][string], 
 export const getVersion = async () => {
     "use server";
     try {
-        // const config = makeExecConfig(params);
         console.debug(`Running: restic version`);
 
         const data = await new Promise<string>((resolve, reject) => {
@@ -140,6 +194,25 @@ export const getVersion = async () => {
     } catch (error: any) {
         console.error(`Failed to get version: ${error.message || error}`);
         throw new Error("Failed to get version");
+    }
+}
+
+
+export const invalidateSnapshotCache = async (repoName: string, params: ConfigSchema["repositories"][string]) => {
+    "use server";
+    try {
+        const cachePath = join(process.cwd(), "data", "cache");
+
+        const files = await readdir(cachePath)
+
+        for (const file of files) {
+            if (file.startsWith(`${repoName}.`)) {
+                const filePath = join(cachePath, file);
+                await unlink(filePath).catch(() => console.error(`Failed to invalidate snapshot cache: ${filePath}`));
+            }
+        }
+    } catch (error: any) {
+        console.error(`Failed to invalidate snapshot cache: ${error.message || error}`);
     }
 }
 
@@ -210,17 +283,30 @@ export namespace Types {
     export type Version = z.infer<typeof Version>
 }
 
+// const zodReviver = (key: string, value: any) => {
+
+//     if (typeof value === "string") {
+
+//         const datetime = z.iso.datetime({ offset: true }).safeParse(value);
+
+//         if (datetime.success) {
+//             return new Date(datetime.data);
+//         }
+//     }
+
+//     return value;
+// };
+
+// ISO 8601 datetime mit offset – schneller Vorab-Check
+const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
 const reviver = (key: string, value: any) => {
-
-    if (typeof value === "string") {
-        
-        const datetime = z.iso.datetime({ offset: true }).safeParse(value);
-
-        if (datetime.success) {
-            return new Date(datetime.data);
+    if (typeof value === "string" && ISO_DATETIME_RE.test(value)) {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+            return date;
         }
     }
-
     return value;
 };
 
@@ -234,6 +320,7 @@ const makeExecConfig = (params: ConfigSchema["repositories"][string]) => {
                     RESTIC_PASSWORD: params.secret,
                     HOME: os.homedir(),
                     XDG_CACHE_HOME: path.join(os.homedir(), ".cache"),
+                    PATH: process.env.PATH,
                 }
             }
         }
@@ -247,6 +334,7 @@ const makeExecConfig = (params: ConfigSchema["repositories"][string]) => {
                     RESTIC_REST_PASSWORD: params.password,
                     HOME: os.homedir(),
                     XDG_CACHE_HOME: path.join(os.homedir(), ".cache"),
+                    PATH: process.env.PATH,
                 }
             }
         }

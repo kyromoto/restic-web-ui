@@ -31,7 +31,7 @@ export default function SnaphotsView() {
         const result = Object.entries(config.repositories).find(([key, value]) => key === id())?.[1];
         
         // console.debug(`${id()} -> ${JSON.stringify(result, null, 2)}`);
-        const snapshots = result ? getSnapshots(result) : [];
+        const snapshots = result ? getSnapshots(id(), result) : [];
         
         // console.debug(`${id()} -> ${JSON.stringify(snapshots, null, 2)}`);
         return snapshots;
@@ -39,6 +39,12 @@ export default function SnaphotsView() {
 
     const sortFn = (a: ResticService.Types.Snapshot, b: ResticService.Types.Snapshot) => {
         return getListSettings().order === "newest" ? b.time.getTime() - a.time.getTime() : a.time.getTime() - b.time.getTime();
+    }
+
+    const invalidateSnapshotCache = () => {
+        console.debug(`Invalidating snapshot cache for ${id()} ...`);
+        const result = Object.entries(config.repositories).find(([key, value]) => key === id())?.[1];
+        if (result) ResticService.invalidateSnapshotCache(id(), result);
     }
 
     createEffect(() => console.debug(`Current page: ${getPage()}`));
@@ -52,7 +58,13 @@ export default function SnaphotsView() {
                     <main class="h-100">
                         <PaginationComponent total={snapshots()?.length || 0} perPage={getListSettings().perPage} currentPage={getPage()} onPageChange={setPage}>
                             <div style={{ display: "flex", "flex-direction": "column", gap: "1rem" }}>
-                                <ListSettingsComponent order={getListSettings().order} perPage={getListSettings().perPage} onChange={setListSettings} />
+                                <div class="d-flex justify-content-end gap-2">
+                                    <ListSettingsComponent order={getListSettings().order} perPage={getListSettings().perPage} onChange={setListSettings} />
+                                    <button type="button" title="Invalidate snapshot cache" class="btn btn-outline-secondary" onClick={() => invalidateSnapshotCache()}>
+                                        <i class="bi bi-database-fill-x" />
+                                    </button>
+                                </div>
+                                
                                 <div class="list-group snapshots w-100">
                                     <For each={snapshots()?.sort(sortFn).slice(left(), right())}>
                                         {(snapshot: ResticService.Types.Snapshot) => (
