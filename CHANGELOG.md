@@ -1,3 +1,7 @@
+## 1.2.0 (2026-03-13)
+
+* feat: cache snapshot file metadata to disk ([77bdde0](https://github.com/kyromoto/restic-web-ui/commit/77bdde0))
+
 ## <small>1.1.9 (2026-03-13)</small>
 
 * fix: package-lock.json ([5faa46e](https://github.com/kyromoto/restic-web-ui/commit/5faa46e))
