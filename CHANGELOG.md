@@ -1,3 +1,8 @@
+## <small>1.1.9 (2026-03-13)</small>
+
+* fix: package-lock.json ([5faa46e](https://github.com/kyromoto/restic-web-ui/commit/5faa46e))
+* fix: sidebar deisgn with flexbox ([51331bd](https://github.com/kyromoto/restic-web-ui/commit/51331bd))
+
 ## <small>1.1.8 (2026-03-12)</small>
 
 * fix: re-design sidebar layout ([32722cf](https://github.com/kyromoto/restic-web-ui/commit/32722cf))
